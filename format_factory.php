@@ -400,7 +400,8 @@ try {
         file_put_contents(CONVERTED_DIR . '/progress.txt', $percentage . '%');
     });
 
-    // 5d. Save the file
+    // 5d. Limit bitrate and save the file
+    $format->setKiloBitrate(350);
     $video->save($format, $outputFile);
     
     // 6. Handle Response
