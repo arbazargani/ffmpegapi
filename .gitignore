@@ -2,3 +2,4 @@ converted/*
 uploads/*
 vendor
 .env
+g.t
