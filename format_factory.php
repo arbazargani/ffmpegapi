@@ -4,9 +4,13 @@ require_once './directory_checker.php';
 
 use FFMpeg\FFMpeg;
 use FFMpeg\Format\Video;
+use FFMpeg\Format\Video\X264;
 use FFMpeg\Format\Audio;
 
 // --- Configuration ---
+
+$start = microtime(true);
+set_time_limit(120);
 
 // Define base directories. IMPORTANT: Make sure these directories exist and are writable by the web server.
 define('BASE_DIR', __DIR__);
@@ -123,7 +127,8 @@ function jsonResponse($code, $message, $data = [], $errors = [], $logs = [])
         'ts'      => time(),
         'data'    => (object) $data,
         'errors'  => (object) $errors,
-        'logs' => $logs
+        'logs' => $logs,
+        'exec_time' => microtime(true) - $start
     ]);
     exit;
 }
@@ -334,53 +339,66 @@ try {
     // 5c. Define the target format
     $format = null;
     switch ($toFormat) {
-        // Video Formats
+        // ---------------- Video Formats ----------------
         case 'mp4':
         case 'm4v':
         case 'avi':
         case 'mov':
         case 'mkv':
-            // Use X264 codec for good quality and compatibility
             $format = new Video\X264('libmp3lame', 'libx264');
+            // Speed optimized: ultrafast preset, reasonable CRF
+            $format->setAdditionalParameters(['-preset', 'ultrafast', '-crf', '28']);
             break;
+
         case 'wmv':
             $format = new Video\WMV();
             break;
+
         case 'flv':
             $format = new Video\FLV();
             break;
+
         case 'webm':
             $format = new Video\WebM();
             break;
-        
-        // Audio Formats
+
+        // ---------------- Audio Formats ----------------
         case 'mp3':
             $format = new Audio\Mp3();
             break;
+
         case 'wav':
             $format = new Audio\Wav();
             break;
+
         case 'aac':
             $format = new Audio\Aac();
             break;
+
         case 'ogg':
-            // Note: This is Audio/Ogg (libvorbis). 
-            // For Video/Ogg (Theora) you'd use new Video\Ogg()
+            // Note: Audio Ogg (libvorbis)
             $format = new Audio\Ogg();
             break;
+
         case 'flac':
             $format = new Audio\Flac();
             break;
+
         default:
-            jsonResponse(500, "Internal error: No format class available for '{$toFormat}'.", [], ["type" => "Server Error"], $logs);
+            jsonResponse(
+                500,
+                "Internal error: No format class available for '{$toFormat}'.",
+                [],
+                ["type" => "Server Error"],
+                $logs
+            );
     }
 
     // Optional: Add a progress listener (useful for debugging, or real-time updates with a job queue)
-    /*
+    
     $format->on('progress', function ($video, $format, $percentage) {
-        // file_put_contents(CONVERTED_DIR . '/progress.txt', $percentage . '%');
+        file_put_contents(CONVERTED_DIR . '/progress.txt', $percentage . '%');
     });
-    */
 
     // 5d. Save the file
     $video->save($format, $outputFile);

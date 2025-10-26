@@ -1,48 +1,86 @@
-FFmpeg PHP Conversion Script
+# FFmpeg PHP Conversion Script
 
 This script provides a basic API for converting media files using FFmpeg.
 
-IMPORTANT SECURITY NOTICE:
+---
 
-This script is designed to process files already on your server in a dedicated uploads directory. It does NOT download files from external URLs, as requested in the original prompt. Allowing downloads from arbitrary user-supplied URLs is a major security risk (SSRF, RCE, DoS) and is strongly discouraged.
+## ⚠️ Important Security Notice
 
-Setup
+This script is designed to process files **already on your server** in a dedicated `uploads` directory.
+It **does NOT download files from external URLs**, as that poses a major security risk (SSRF, RCE, DoS). Allowing downloads from arbitrary user-supplied URLs is **strongly discouraged**.
 
-Create Directories:
-You must create two directories in the same folder as the PHP script. Make sure your web server (e.g., Apache, Nginx) has permission to write to them.
+---
 
-composer require php-ffmpeg/php-ffmpeg
+## Setup
+
+### 1. Install Required Composer Packages
+
+```bash
+composer install --ignore-platform-reqs
+```
+
+### 2. Set NGINX Timeouts
+
+Add the following to your NGINX configuration:
+
+```nginx
+server {
+    ...
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+
+        # Timeouts
+        fastcgi_read_timeout 120s;
+        fastcgi_send_timeout 120s;
+    }
+}
+```
+
+### 3. Create Directories
+
+You must create two directories in the same folder as the PHP script and ensure your web server has write permissions:
+
+```bash
 mkdir uploads
 mkdir converted
 chmod -R 755 uploads
 chmod -R 755 converted
+```
 
+* **`uploads/`**: Place the files you want to convert here.
+* **`converted/`**: Converted files will be saved here.
 
-uploads/: Place the files you want to convert here.
+### 4. Create `.env` File
 
-converted/: The script will save converted files here.
+Copy the example environment file and edit it with the correct paths to your FFmpeg binaries:
 
-Create .env File:
-Copy the .env.example file to a new file named .env and fill in the paths to your FFmpeg binaries.
-
+```bash
 cp .env.example .env
+```
 
+Edit `.env` to match your system configuration.
 
-Then, edit .env with the correct paths for your system.
+### 5. Install FFmpeg
 
-Install FFmpeg:
-You must have FFmpeg installed on your server. You can download it from https://ffmpeg.org/.
+Make sure FFmpeg is installed on your server. You can download it from [https://ffmpeg.org/](https://ffmpeg.org/).
 
-How to Use
+---
 
-Once set up, you can call the script with a filename (which must exist in the uploads/ directory) and a to format.
+## How to Use
 
-Example Request:
+Once set up, call the script with a filename (must exist in `uploads/`) and a target format.
 
+### Example Request
+
+```
 http://your-server.com/format_factory.php?filename=my-video.avi&to=mp4
+```
 
-Example Success Response:
+### Example Success Response
 
+```json
 {
     "code": 200,
     "message": "File converted successfully.",
@@ -54,10 +92,11 @@ Example Success Response:
     },
     "errors": {}
 }
+```
 
+### Example Error Response
 
-Example Error Response:
-
+```json
 {
     "code": 400,
     "message": "Conversion from 'mp3' to 'mp4' is not allowed.",
@@ -67,3 +106,4 @@ Example Error Response:
         "type": "Validation Error"
     }
 }
+```
